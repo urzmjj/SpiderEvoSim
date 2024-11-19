@@ -11,6 +11,7 @@ class Spider{
   int visIndex;
   int generation;
   int birth_tick;
+  int LEG_COUNT;
   Spider parent;
   ArrayList<Integer> swattersSeen = new ArrayList<Integer>(0); 
   
@@ -20,11 +21,13 @@ class Spider{
     for(int g = 0; g < GENOME_LENGTH; g++){
       genome[g] = random(0.2,0.4);
     }
+    genome[MAX_LEG_COUNT*GENES_PER_LEG] = random(0,1);
+    LEG_COUNT = round(map(genome[MAX_LEG_COUNT*GENES_PER_LEG],0,1,1,8));
     coor = new float[2];
     for(int d = 0; d < 2; d++){
       coor[d] = random(0,room.getMaxDim(d));
     }
-    leg_coor = new float[LEG_COUNT][2];
+    leg_coor = new float[8][2];
     float ang = random(0,1);
     for(int L = 0; L < LEG_COUNT; L++){
       float angL = (L+ang)*PI/2;
@@ -177,8 +180,8 @@ class Spider{
     float first_angle = 0;
     for(int L = 0; L < LEG_COUNT; L++){
       int genome_index = L*GENES_PER_LEG+2*step+1;
-      if(darkest_sensed_shadow < genome[L*GENES_PER_LEG+12]){ // it's below the threshold, so do the dark pattern
-        genome_index += 6;
+      if(darkest_sensed_shadow < genome[L*GENES_PER_LEG+16]){ // it's below the threshold, so do the dark pattern
+        genome_index += 8;
       }
       float distance = genome[genome_index]*MAX_LEG_SPAN;
       float delta_x = leg_coor[L][0]-center[0];
@@ -262,13 +265,13 @@ class Spider{
     int step2 = whereInCycle(SPIDER_ITER_BUCKETS/2)/SPIDER_ITER_BUCKETS;
     float darkest = getDarkestShadow();
     for(int L = 0; L < LEG_COUNT; L++){
-      int index = L*13+step*2+1;
-      int index2 = L*13+step2*2;
-      float threshold = genome[L*13+12];
+      int index = L*17+step*2+1;
+      int index2 = L*17+step2*2;
+      float threshold = genome[L*17+16];
       if(darkest < threshold){
-        shouldBeGreen[L*13+12] = true;
-        index += 6;
-        index2 += 6;
+        shouldBeGreen[L*17+16] = true;
+        index += 8;
+        index2 += 8;
       }
       shouldBeGreen[index] = true;
       shouldBeGreen[index2] = true;
@@ -285,18 +288,18 @@ class Spider{
       float g2 = g/GENES_PER_LEG;
       float x;
       float y;
-      if(g1 == 12){
+      if(g1 == 16){
         x = 185;
         y = 170;
       }else{
         x = 20*g1+10;
-        y = 180-(g1%2)*40+10;
-        if(g1 >= 6){
-          x += 130;
+        y = 180-(g1%2)*20+10;
+        if(g1 >= 8){
+          x += 50;
         }
       }
-      y += 100*g2;
-      panel.rect(x,y,30,30);
+      y += 40*g2;
+      panel.rect(x,y,15,15);
     }
     panel.fill(255);
     panel.textAlign(LEFT);
@@ -337,8 +340,9 @@ class Spider{
   void reincarnate(ArrayList<Spider> spiders){
     dailyDeaths++;
     parent = spiders.get((int)random(0,spiders.size()));
-    float MUTATION_FACTOR = 0.2;
+    float MUTATION_FACTOR = 0.5;
     genome = mutate(parent.genome, MUTATION_FACTOR);
+    LEG_COUNT = round(map(genome[MAX_LEG_COUNT*GENES_PER_LEG],0,1,1,8));
     coor = deepCopy(parent.coor);
     leg_coor = deepCopy(parent.leg_coor);
     randomShift();
@@ -357,11 +361,11 @@ class Spider{
   float getSensitivity(){
     float sensitivity = 0;
     for(int L = 0; L < LEG_COUNT; L++){
-      for(int k = 0; k < 6; k++){
-        sensitivity += abs(genome[L*13+k]-genome[L*13+6+k]);
+      for(int k = 0; k < 8; k++){
+        sensitivity += abs(genome[L*17+k]-genome[L*17+8+k]);
       }
     }
-    return sensitivity/LEG_COUNT/6*100;
+    return sensitivity/LEG_COUNT/8*100;
   }
   void writeData(Float[] datum){
     datum[0] += ticksToDays(getAge());

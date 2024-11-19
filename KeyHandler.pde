@@ -1,5 +1,5 @@
 class KeyHandler{
-  int[] KEYS = {65,87,68,83,32,16,10};
+  int[] KEYS = {65,87,68,83,32,16,10,88};
   int LEN = KEYS.length;
   boolean[] keysDown = new boolean[LEN];
   public KeyHandler(){

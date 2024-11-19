@@ -11,7 +11,8 @@ int DIM_COUNT = 3;
 int SPIDER_ITER_BUCKETS = 4;
 float SWAT_SPEED = 0.001;
 int R = 40;
-int STEPS_CYCLE = 3;
+int START_SWATTER_COUNT = 20;
+int STEPS_CYCLE = 4;
 int SIBSC = SPIDER_ITER_BUCKETS*STEPS_CYCLE;
 Spider highlight_spider;
 ArrayList<Spider> spiders;
@@ -31,9 +32,9 @@ boolean TRAP_MOUSE = true;
 boolean lock_highlight = false;
 GLWindow r;
 
-int LEG_COUNT = 4;
+int MAX_LEG_COUNT = 8;
 int GENES_PER_LEG = STEPS_CYCLE*4+1; //13
-int GENOME_LENGTH = LEG_COUNT*GENES_PER_LEG;
+int GENOME_LENGTH = MAX_LEG_COUNT*GENES_PER_LEG+1;
 
 color WALL_COLOR = color(255,200,150);
 color FLOOR_COLOR = color(155,170,185);
@@ -69,10 +70,12 @@ color darken(color c, float perc){
   }
 float[] mutate(float[] input, float mutation_rate){
   float[] result = new float[input.length];
-  for(int i = 0; i < input.length; i++){
+  for(int i = 0; i < input.length - 1; i++){
     float mutation = random(-mutation_rate,mutation_rate);
     result[i] = sig(sig_inv(input[i])+mutation);
   }
+  float mutation = random(mutation_rate/-5,mutation_rate*5);
+  result[input.length - 1] = sig(sig_inv(input[input.length - 1])+mutation);
   return result;
 }
 float[] deepCopy(float[] input){
@@ -140,7 +143,12 @@ void setup(){
   buttons.add(new Button(4,1800,700,"Speed up,Swatters"));
   buttons.add(new Button(5,1950,700,"Slow down,Swatters"));
   
-  buttons.add(new Button(6,1450,700,"Invent,Swatters"));
+  buttons.add(new Button(6,1800,500,"Increase,Swatters"));
+  buttons.add(new Button(7,1950,500,"Reduce,Swatters"));
+  
+  buttons.add(new Button(8,1450,700,"Invent,Swatters"));
+  
+
   
   for(int d = 0; d < STAT_COUNT; d++){
     statImages[d] = createGraphics(800,600);

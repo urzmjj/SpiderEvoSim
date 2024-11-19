@@ -16,30 +16,37 @@ class Button{
     float px = player.coor[0];
     float py = player.coor[1];
     float pz = player.coor[2];
-    int START_SWATTER_COUNT = 20;
     if(px >= x-B_R && px < x+B_R && py >= y-B_R && py < y+B_R && pz == 0){
       if(!on){
         String note = "";
         if(index == 0){
-          playback_speed *= 2;
+          playback_speed = min(4096,playback_speed*2);
         }else if(index == 1){
           playback_speed = max(1,playback_speed/2);
         }else if(index == 2){
-          R += 5;
+          R = min(640,R+5);
           createSwatters(room, START_SWATTER_COUNT);
           note = "Swatters-grown to-"+swatterSizeToText(R);
         }else if(index == 3){
-          R -= 5;
+          R = max(120,R-5);
           createSwatters(room, START_SWATTER_COUNT);
           note = "Swatters-shrunk to-"+swatterSizeToText(R);
         }else if(index == 4){
-          SWAT_SPEED *= 1.5;
+          SWAT_SPEED = min(0.001*pow(1.5,12),SWAT_SPEED*1.5);
           note = "Swatters-sped up to-"+swatterSpeedToText(SWAT_SPEED,true);
         }else if(index == 5){
-          SWAT_SPEED /= 1.5;
+          SWAT_SPEED = max(0.001,SWAT_SPEED/1.5);
           note = "Swatters-slowed to-"+swatterSpeedToText(SWAT_SPEED,true);
         }else if(index == 6){
-          createSwatters(room, START_SWATTER_COUNT);
+           START_SWATTER_COUNT = min(150,START_SWATTER_COUNT+5);
+           createSwatters(room, START_SWATTER_COUNT);
+           note = "Swatters-increased to-"+swatterSpeedToText(START_SWATTER_COUNT,true);
+        }else if(index == 7){
+           START_SWATTER_COUNT = max(0,START_SWATTER_COUNT-5);
+           createSwatters(room, START_SWATTER_COUNT);
+           note = "Swatters-reduced to-"+swatterSpeedToText(START_SWATTER_COUNT,true);
+        }else if(index == 8){
+           createSwatters(room, START_SWATTER_COUNT);
         }
         if(note.length() >= 1){
           statNotes.set(statNotes.size()-1,note);
@@ -75,6 +82,8 @@ class Button{
       g.text("Swatter size: "+swatterSizeToText(R),75,-100);
     }else if(index == 4){
       g.text("Swatter speed: "+swatterSpeedToText(SWAT_SPEED,false),75,-100);
+    }else if(index == 6){
+      g.text("Swatter count: "+swatterCountToText(START_SWATTER_COUNT),75,-100);
     }
     g.popMatrix();
   }
@@ -87,5 +96,8 @@ class Button{
     }else{
       return nf(x*2400,0,1)+" swats per hour";
     }
+  }
+  String swatterCountToText(float x){
+      return (int)(x)+" swatters";
   }
 }
