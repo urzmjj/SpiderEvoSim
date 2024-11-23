@@ -1,5 +1,6 @@
 import com.jogamp.newt.opengl.GLWindow;
 import processing.sound.*;
+import java.util.Arrays;
 
 int CENTER_X = 960; // try setting this to 960 or 961 if there is horizontal camera-pan-drifting
 String[] soundFileNames = {"slap0.wav","slap1.wav","slap2.wav","splat0.wav","splat1.wav","splat2.wav","boop1.wav","boop2.wav","jump.wav","news.wav"};
@@ -12,7 +13,7 @@ int SPIDER_ITER_BUCKETS = 4;
 float SWAT_SPEED = 0.001;
 int R = 40;
 int START_SWATTER_COUNT = 20;
-int STEPS_CYCLE = 4;
+int STEPS_CYCLE = 6;
 int SIBSC = SPIDER_ITER_BUCKETS*STEPS_CYCLE;
 Spider highlight_spider;
 ArrayList<Spider> spiders;
@@ -27,7 +28,7 @@ PGraphics g;
 int playback_speed = 1;
 int dailyDeaths = 0;
 int swattersSeenTotal = 0;
-float TICKS_PER_DAY = 10000;
+float TICKS_PER_DAY = 10000.0f;
 boolean TRAP_MOUSE = true;
 boolean lock_highlight = false;
 GLWindow r;
@@ -114,58 +115,118 @@ void createSwatters(Room room, int START_SPIDER_COUNT){
   }
 }
 
-void setup(){
-  windowImages = new PImage[WINDOW_COUNT];
-  for(int w = 0; w < WINDOW_COUNT; w++){
-    windowImages[w] = loadImage("windows/w"+nf(w+1,4,0)+".png");
-  }
-  sfx = new SoundFile[soundFileNames.length];
-  for(int s = 0; s < soundFileNames.length; s++){
-    sfx[s] = new SoundFile(this, "audio/"+soundFileNames[s]);
-  }
+// Global variable to track loading status
+boolean resourcesLoaded = false;
+
+// Must be declared at the top level for Processing's size() to work
+void settings() {
+  size(1920,1080,P3D);
+}
   
+  void setup() {
+  // Initialize core components first
   float[][] walls = {{0,0},{975,0},{975,670},{1100,670},{1100,0},{2100,0},{2100,1000},{1100,1000},{1100,780},{975,780},{975,1000},{0,1000}};
   float[] zs = {0,500};
   float[] player_coor = {700,700,0,0};
   room = new Room(walls,zs);
   player = new Player(player_coor);
-  spiders = createSpiders(room);
-  createSwatters(room, 0);
   keyHandler = new KeyHandler();
-  size(1920,1080,P3D);
   
-  buttons.add(new Button(0,1300,300,"Increase"));
-  buttons.add(new Button(1,1450,300,"Decrease"));
-  
-  buttons.add(new Button(2,1800,300,"Enlarge,Swatters"));
-  buttons.add(new Button(3,1950,300,"Shrink,Swatters"));
-  
-  buttons.add(new Button(4,1800,700,"Speed up,Swatters"));
-  buttons.add(new Button(5,1950,700,"Slow down,Swatters"));
-  
-  buttons.add(new Button(6,1800,500,"Increase,Swatters"));
-  buttons.add(new Button(7,1950,500,"Reduce,Swatters"));
-  
-  buttons.add(new Button(8,1450,700,"Invent,Swatters"));
-  
-
-  
-  for(int d = 0; d < STAT_COUNT; d++){
-    statImages[d] = createGraphics(800,600);
-  }
-  
+  // Setup window
   r = (GLWindow)surface.getNative();
   r.confinePointer(true);
   r.setPointerVisible(false);
   g = createGraphics(1920,1080,P3D);
+  
+  // Start resource loading thread
+  thread("loadResources");
 }
+
+void loadResources() {
+  // Load windows in batches of 5
+  windowImages = new PImage[WINDOW_COUNT];
+  for(int w = 0; w < WINDOW_COUNT; w += 5) {
+    int endIndex = min(w + 5, WINDOW_COUNT);
+    for(int i = w; i < endIndex; i++) {
+      windowImages[i] = loadImage("windows/w"+nf(i+1,4,0)+".png");
+    }
+  }
+  
+  // Load sound files in batches
+  sfx = new SoundFile[soundFileNames.length];
+  for(int s = 0; s < soundFileNames.length; s += 3) {
+    int endIndex = min(s + 3, soundFileNames.length);
+    for(int i = s; i < endIndex; i++) {
+      sfx[i] = new SoundFile(this, "audio/"+soundFileNames[i]);
+    }
+  }
+  
+  // Initialize game objects
+  spiders = createSpiders(room);
+  createSwatters(room, 0);
+  
+  // Initialize buttons
+  buttons.add(new Button(0,1300,300,"Increase"));
+  buttons.add(new Button(1,1450,300,"Decrease"));
+  buttons.add(new Button(2,1800,300,"Enlarge,Swatters"));
+  buttons.add(new Button(3,1950,300,"Shrink,Swatters"));
+  buttons.add(new Button(4,1800,700,"Speed up,Swatters"));
+  buttons.add(new Button(5,1950,700,"Slow down,Swatters"));
+  buttons.add(new Button(6,1800,500,"Increase,Swatters"));
+  buttons.add(new Button(7,1950,500,"Reduce,Swatters"));
+  buttons.add(new Button(8,1450,700,"Invent,Swatters"));
+  
+  // Initialize stat images
+  for(int d = 0; d < STAT_COUNT; d++){
+    statImages[d] = createGraphics(800,600);
+  }
+  
+  // Mark loading as complete
+  resourcesLoaded = true;
+}
+
+ArrayList<Long> frameTimestamps = new ArrayList<>(); // To store frame timestamps
+float averageFps = 0; // Average FPS over the last 4 seconds
+
 void draw(){
-  doMouse();
-  doPhysics();
-  drawVisuals();
-  image(g,0,0);
-  drawUI();
-  frames++;
+  if (!resourcesLoaded) {
+    // Show loading screen
+    background(0);
+    fill(255);
+    textAlign(CENTER, CENTER);
+    textSize(32);
+    text("Loading...", width/2, height/2);
+    return;
+  }  
+  // Capture current time in milliseconds
+    long currentTime = millis();
+    frameTimestamps.add(currentTime);
+    
+    // Remove timestamps older than 4 seconds
+    while (frameTimestamps.size() > 0 && frameTimestamps.get(0) < currentTime - 4000) {
+        frameTimestamps.remove(0);
+    }
+    
+    // Calculate average FPS
+    if (frameTimestamps.size() > 1) {
+        float elapsedSeconds = (frameTimestamps.get(frameTimestamps.size() - 1) - frameTimestamps.get(0)) / 1000.0f;
+        averageFps = (frameTimestamps.size() - 1) / elapsedSeconds;
+    }
+
+    // Original draw logic
+    doMouse();
+    doPhysics();
+    drawVisuals();
+    image(g, 0, 0);
+    drawUI();
+    frames++;
+    
+    if (camera[1] < -1) {
+        camera[1] = -1;
+    }
+    if (camera[1] > 1) {
+        camera[1] = 1;
+    }
 }
 void checkHighlight(){
   if(!lock_highlight){
@@ -195,31 +256,54 @@ void drawUI(){
     PGraphics genomePanel = highlight_spider.drawGenome();
     image(genomePanel,width-genomePanel.width-30,height-genomePanel.height-30);
   }
-  textAlign(LEFT);
-  textSize(50);
-  text(ticksToDate(ticks),20,65);
+    textAlign(LEFT);
+    textSize(50);
+    fill(255); // Set text color to white for visibility
+    text(ticksToDate(ticks), 20, 65);
+    
+    // Display FPS
+    textAlign(RIGHT);
+    textSize(25);
+    text("FPS: " + nf(averageFps, 0, 2), width - 20, 30); // Display the FPS in the top-right corner
 }
 
-String dateNumToMonthString(int d){
-  String[] monthNames = {"January","February","March","April","May","June","July","August","September","October","November","December"};
-  int[] monthDays = {31,28,31,30,31,30,31,31,30,31,30,31};
-  for(int m = 0; m < 12; m++){
-    if(d < monthDays[m]){
-      return monthNames[m]+" "+(d+1);
+String dateNumToMonthString(int d) {
+    String[] monthNames = {"January","February","March","April","May","June",
+                          "July","August","September","October","November","December"};
+    int[] monthDays = {31,28,31,30,31,30,31,31,30,31,30,31};
+    
+    // Bounds check
+    if (d < 0) {
+        println("Warning: Negative date value");
+        return monthNames[0] + " 1";
     }
-    d -= monthDays[m];
-  }
-  return monthNames[11]+monthDays[11];
+    
+    for (int m = 0; m < 12; m++) {
+        if (d < monthDays[m]) {
+            return monthNames[m] + " " + (d + 1);
+        }
+        d -= monthDays[m];
+    }
+    return monthNames[11] + " " + monthDays[11];
 }
-String ticksToDate(int t){
-  float daysTotalFloat = ticksToDays(t)+0.5;
-  int daysTotalInt = (int)daysTotalFloat;
-  float timeOfDay = daysTotalFloat%1.0;
-  int years = daysTotalInt/365;
-  int days = daysTotalInt%365;
-  String[] TOD_LIST = {"Night","Sunrise","Morning","Afternoon","Sunset","Evening"};
-  String TOD = TOD_LIST[(int)(timeOfDay*6)];
-  return "Year "+(years+1)+", "+dateNumToMonthString(days)+" - "+TOD;
+String ticksToDate(long t) {
+    float daysTotalFloat = ticksToDays(t) + 0.5f;
+    int daysTotalInt = (int)daysTotalFloat;
+    float timeOfDay = daysTotalFloat % 1.0f;
+    
+    // Add bounds checking
+    if (daysTotalInt > 365_000_000) {  
+        println("Warning: Date calculation overflow");
+        return "Year MAX";
+    }
+    
+    int years = daysTotalInt / 365;
+    int days = daysTotalInt % 365;
+    
+    String[] TOD_LIST = {"Night","Sunrise","Morning","Afternoon","Sunset","Evening"};
+    String TOD = TOD_LIST[(int)(timeOfDay * 6)];
+    
+    return "Year " + (years + 1) + ", " + dateNumToMonthString(days) + " - " + TOD;
 }
 void doMouse(){
   if(TRAP_MOUSE){
@@ -289,43 +373,75 @@ float getBiodiversity(){
   }
   return total_diversity/GENOME_LENGTH*100;
 }
-void collectData(){
-  if(ticks%CHANGE_WINDOWS_EVERY == 0){
-    for(int w = 0; w < windows.size(); w++){
-      windows.get(w).updateShow();
+void collectData() {
+    if (ticks % CHANGE_WINDOWS_EVERY == 0) {
+        Window[] windowArray = windows.toArray(new Window[0]);
+        for (Window window : windowArray) {
+            window.updateShow();
+        }
     }
-  }
-  if(ticks%TICKS_PER_DAY == 0){
-    Float[] datum = new Float[STAT_COUNT];
-    for(int d = 0; d < STAT_COUNT; d++){
-      datum[d] = new Float(0);
+    
+    if (ticks % (long)TICKS_PER_DAY == 0) {
+        // Pre-allocate arrays and reuse them
+        Float[] datum = new Float[STAT_COUNT];
+        Spider[] spiderArray = spiders.toArray(new Spider[0]);
+        float spiderCount = spiderArray.length;
+        
+        // Initialize datum array more efficiently
+        Arrays.fill(datum, 0.0f);
+        
+        // Process all spiders in a single pass
+        for (Spider spider : spiderArray) {
+            spider.writeData(datum);
+        }
+        
+        // Batch process divisions
+        if (spiderCount > 0) {
+            float invCount = 1.0f / spiderCount;
+            for (int d = 0; d < STAT_COUNT; d++) {
+                datum[d] *= invCount;
+            }
+        }
+        
+        datum[1] = (float)dailyDeaths;
+        datum[2] = (float)(swattersSeenTotal - dailyDeaths);
+        datum[4] = getBiodiversity();
+        
+        // Store data and reset counters
+        dailyDeaths = 0;
+        swattersSeenTotal = 0;
+        stats.add(datum);
+        statNotes.add("");
+        
+        // Cache graph dimensions and titles
+        final float[] GRAPH_DIM = {100, 120, 575, 400};
+        final String[] TITLES = {
+            "Average Age (days)", 
+            "Daily Deaths",
+            "Daily Swatter Escapes", 
+            "Sensitivity (out of 100)", 
+            "Total Biodiversity (out of 100)", 
+            "Average Swatters Seen"
+        };
+        
+        // Pre-allocate graph data array
+        float[] graphData = new float[stats.size()];
+        // Cache the color value
+        color graphColor = color(128, 0, 0);
+        
+        // Draw all graphs with minimal object creation
+        for (int d = 0; d < STAT_COUNT; d++) {
+            for (int i = 0; i < stats.size(); i++) {
+                graphData[i] = stats.get(i)[d];
+            }
+            drawGraphOn(statImages[d], graphData, TITLES[d], GRAPH_DIM, graphColor, d);
+        }
+        
+        // Handle sound
+        float amp = 1.0f - min(0.8f, (playback_speed-1)/200.0f);
+        sfx[9].play();
+        sfx[9].amp(amp);
     }
-    for(int s = 0; s < spiders.size(); s++){
-      spiders.get(s).writeData(datum);
-    }
-    for(int d = 0; d < STAT_COUNT; d++){
-      datum[d] /= spiders.size();
-    }
-    datum[1] = (float)dailyDeaths;
-    datum[2] = (float)(swattersSeenTotal-dailyDeaths);
-    datum[4] = getBiodiversity();
-    dailyDeaths = 0;
-    swattersSeenTotal = 0;
-    stats.add(datum);
-    statNotes.add("");
-    float[] graph_dim = {100,120,575,400};
-    String[] titles = {"Average Age (days)", "Daily Deaths",
-  "Daily Swatter Escapes", "Sensitivity (out of 100)", "Total Biodiversity (out of 100)", "Average Swatters Seen"};
-    for(int d = 0; d < STAT_COUNT; d++){
-      float[] graphData = new float[stats.size()];
-      for(int i = 0; i < stats.size(); i++){
-        graphData[i] = stats.get(i)[d];
-      }
-      drawGraphOn(statImages[d],graphData,titles[d],graph_dim, color(128,0,0), d);
-    }
-    sfx[9].play();
-    sfx[9].amp(1.0-min(0.8,(playback_speed-1)/200.0));
-  }
 }
 float getUnit(float a, float b){
   float diff = b-a;
@@ -430,7 +546,12 @@ void drawGraphOn(PGraphics s, float[] data, String title, float[] graph_dim, col
   s.endDraw();
 }
 float daylight(){
-  return 0.5+0.5*cos(ticksToDays(ticks)*(2*PI));
+    float days = ticksToDays(ticks);
+    if (Float.isInfinite(days) || Float.isNaN(days)) {
+        println("Warning: Day calculation overflow in daylight()");
+        return 0.5f;
+    }
+    return 0.5f + 0.5f * cos(days * (2 * PI));
 }
 void drawVisuals(){
   g.beginDraw();

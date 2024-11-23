@@ -62,20 +62,41 @@ class Spider{
     g.popMatrix();
     return value;
   }
-  color getColor(){
+  color getColor() {
     int c = swattersSeen.size();
-    if(c == 0 || c == 1){
-      return color(0,0,0,255);
-    }else{
-      if(c < 6){
-        float fac = (c-1)/5.0;
-        return color(0,fac*140,255-fac*255,255);
-      }else{
-        float fac = min(1,(c-6)/19.0);
-        return color(255*fac,140-fac*140,0,255);
-      }
+    if (c == 0) {
+        return color(0, 0, 0, 255); // Black
+    } else {
+        if (c <= 5) {
+            float fac = c / 5.0;
+            return color(0, fac * 140, 255 - fac * 255, 255); // Blue transition
+        } else if (c <= 20) {
+            float fac = (c - 5) / 15.0;
+            return color(fac * 255, 140 + fac * 155, 20, 255); // Green with a higher base for better contrast
+        } else if (c <= 40) {
+            float fac = (c - 20) / 20.0;
+            return color(255, 255 - fac * 115, 50, 255); // Yellow with a richer tone
+        } else if (c <= 100) {
+            float fac = (c - 40) / 60.0;
+            return color(255, 140 - fac * 140, 0, 255); // Pink transition
+        } else if (c <= 200) {
+            float fac = (c - 100) / 100.0;
+            return color(255, 0, fac * 255, 255); // Purple transition
+        } else if (c <= 500) {
+            float fac = (c - 200) / 300.0;
+            return color(255 - fac * 141, 20, 255, 255); // Deeper purple to cyan
+        } else if (c <= 1000) {
+            float fac = (c - 500) / 500.0;
+            return color(114 - fac * 114, fac * 255, 255, 255); // Cyan transition
+        } else if (c <= 4000) {
+            float fac = (c - 1000) / 3000.0;
+            return color(225 + fac * 30, 210 - fac * 20, 30 + fac * 50); // Gold with richer, deeper hues
+        } else {
+            float fac = min(1, (c - 4000) / 6000.0);
+            return color(255, 202 + fac * 53, fac * 255); // Transition to white
+        }
     }
-  }
+}
   color transitionColor(color a, color b, float prog){
     float newR = lerp(red(a), red(b), prog);
     float newG = lerp(green(a), green(b), prog);
@@ -180,8 +201,8 @@ class Spider{
     float first_angle = 0;
     for(int L = 0; L < LEG_COUNT; L++){
       int genome_index = L*GENES_PER_LEG+2*step+1;
-      if(darkest_sensed_shadow < genome[L*GENES_PER_LEG+16]){ // it's below the threshold, so do the dark pattern
-        genome_index += 8;
+      if(darkest_sensed_shadow < genome[L*GENES_PER_LEG+STEPS_CYCLE*4]){ // it's below the threshold, so do the dark pattern
+        genome_index += STEPS_CYCLE*2;
       }
       float distance = genome[genome_index]*MAX_LEG_SPAN;
       float delta_x = leg_coor[L][0]-center[0];
@@ -265,13 +286,13 @@ class Spider{
     int step2 = whereInCycle(SPIDER_ITER_BUCKETS/2)/SPIDER_ITER_BUCKETS;
     float darkest = getDarkestShadow();
     for(int L = 0; L < LEG_COUNT; L++){
-      int index = L*17+step*2+1;
-      int index2 = L*17+step2*2;
-      float threshold = genome[L*17+16];
+      int index = L*(STEPS_CYCLE*4+1)+step*2+1;
+      int index2 = L*(STEPS_CYCLE*4+1)+step2*2;
+      float threshold = genome[L*(STEPS_CYCLE*4+1)+STEPS_CYCLE*4];
       if(darkest < threshold){
-        shouldBeGreen[L*17+16] = true;
-        index += 8;
-        index2 += 8;
+        shouldBeGreen[L*(STEPS_CYCLE*4+1)+STEPS_CYCLE*4] = true;
+        index += STEPS_CYCLE*2;
+        index2 += STEPS_CYCLE*2;
       }
       shouldBeGreen[index] = true;
       shouldBeGreen[index2] = true;
@@ -288,14 +309,14 @@ class Spider{
       float g2 = g/GENES_PER_LEG;
       float x;
       float y;
-      if(g1 == 16){
-        x = 185;
-        y = 170;
+      if(g1 == STEPS_CYCLE*4){
+        x = STEPS_CYCLE*20+35;
+        y = 180;
       }else{
-        x = 20*g1+10;
+        x = 10*g1+10;
         y = 180-(g1%2)*20+10;
-        if(g1 >= 8){
-          x += 50;
+        if(g1 >= STEPS_CYCLE*2){
+          x += STEPS_CYCLE*10;
         }
       }
       y += 40*g2;
@@ -361,8 +382,8 @@ class Spider{
   float getSensitivity(){
     float sensitivity = 0;
     for(int L = 0; L < LEG_COUNT; L++){
-      for(int k = 0; k < 8; k++){
-        sensitivity += abs(genome[L*17+k]-genome[L*17+8+k]);
+      for(int k = 0; k < STEPS_CYCLE*2; k++){
+        sensitivity += abs(genome[L*(STEPS_CYCLE*4+1)+k]-genome[L*(STEPS_CYCLE*4+1)+STEPS_CYCLE*2+k]);
       }
     }
     return sensitivity/LEG_COUNT/8*100;

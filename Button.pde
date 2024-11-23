@@ -40,11 +40,11 @@ class Button{
         }else if(index == 6){
            START_SWATTER_COUNT = min(150,START_SWATTER_COUNT+5);
            createSwatters(room, START_SWATTER_COUNT);
-           note = "Swatters-increased to-"+swatterSpeedToText(START_SWATTER_COUNT,true);
+           note = "Swatters-increased to-"+swatterCountToText(START_SWATTER_COUNT);
         }else if(index == 7){
            START_SWATTER_COUNT = max(0,START_SWATTER_COUNT-5);
            createSwatters(room, START_SWATTER_COUNT);
-           note = "Swatters-reduced to-"+swatterSpeedToText(START_SWATTER_COUNT,true);
+           note = "Swatters-reduced to-"+swatterCountToText(START_SWATTER_COUNT);
         }else if(index == 8){
            createSwatters(room, START_SWATTER_COUNT);
         }
