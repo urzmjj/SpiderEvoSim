@@ -300,9 +300,9 @@ String ticksToDate(long t) {
     int years = daysTotalInt / 365;
     int days = daysTotalInt % 365;
     
-    String[] TOD_LIST = {"Night","Sunrise","Morning","Afternoon","Sunset","Evening"};
-    String TOD = TOD_LIST[(int)(timeOfDay * 6)];
-    
+    String[] TOD_LIST = {"Midnight","Night","Sunrise","Morning","Noon","Afternoon","Sunset","Evening"};
+    String TOD = TOD_LIST[(int)(timeOfDay * 8)];
+    a
     return "Year " + (years + 1) + ", " + dateNumToMonthString(days) + " - " + TOD;
 }
 void doMouse(){
