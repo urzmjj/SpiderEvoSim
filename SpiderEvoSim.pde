@@ -302,7 +302,7 @@ String ticksToDate(long t) {
     
     String[] TOD_LIST = {"Midnight","Night","Sunrise","Morning","Noon","Afternoon","Sunset","Evening"};
     String TOD = TOD_LIST[(int)(timeOfDay * 8)];
-    a
+    
     return "Year " + (years + 1) + ", " + dateNumToMonthString(days) + " - " + TOD;
 }
 void doMouse(){
